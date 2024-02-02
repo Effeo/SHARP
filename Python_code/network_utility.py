@@ -39,12 +39,34 @@ def reduction_a_block_small(x_in, base_name):
     x4 = tf.keras.layers.Concatenate()([x1, x2, x3])
     return x4
 
+def inception_block(x_input, filters):
+    # Path 1: 1x1 Convolution
+    path1 = tf.keras.layers.Conv2D(filters, (1, 1), padding='same', activation='relu')(x_input)
 
-def csi_network_inc_res(input_sh, output_sh):
+    # Path 2: 1x1 Convolution followed by 3x3 Convolution
+    path2 = tf.keras.layers.Conv2D(filters, (1, 1), padding='same', activation='relu')(x_input)
+    path2 = tf.keras.layers.Conv2D(filters, (3, 3), padding='same', activation='relu')(path2)
+
+    # Path 3: 1x1 Convolution followed by 5x5 Convolution
+    path3 = tf.keras.layers.Conv2D(filters, (1, 1), padding='same', activation='relu')(x_input)
+    path3 = tf.keras.layers.Conv2D(filters, (5, 5), padding='same', activation='relu')(path3)
+
+    # Path 4: 3x3 Max Pooling followed by 1x1 Convolution
+    path4 = tf.keras.layers.MaxPooling2D((3, 3), strides=(1, 1), padding='same')(x_input)
+    path4 = tf.keras.layers.Conv2D(filters, (1, 1), padding='same', activation='relu')(path4)
+
+    # Concatenate all paths
+    x = tf.keras.layers.concatenate([path1, path2, path3, path4], axis=-1)
+    return x
+
+def csi_network_inc_res(input_sh, output_sh, type_of_block):
     x_input = tf.keras.Input(input_sh)
 
-    x2 = reduction_a_block_small(x_input, base_name='1st')
-
+    if type_of_block == 'inception':
+        x2 = inception_block(x_input, 64)
+    else:
+        x2 = reduction_a_block_small(x_input, base_name='1st')
+        
     x3 = conv2d_bn(x2, 3, (1, 1), name='conv4')
 
     x = tf.keras.layers.Flatten()(x3)
@@ -52,5 +74,3 @@ def csi_network_inc_res(input_sh, output_sh):
     x = tf.keras.layers.Dense(output_sh, activation=None, name='dense2')(x)
     model = tf.keras.Model(inputs=x_input, outputs=x, name='csi_model')
     return model
-
-
