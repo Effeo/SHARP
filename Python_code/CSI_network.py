@@ -176,7 +176,7 @@ if __name__ == '__main__':
     callback_save = tf.keras.callbacks.ModelCheckpoint(name_model, save_freq='epoch', save_best_only=True,
                                                        monitor='val_sparse_categorical_accuracy')
 
-    results = csi_model.fit(dataset_csi_train, epochs=25, steps_per_epoch=train_steps_per_epoch,
+    results = csi_model.fit(dataset_csi_train, epochs=10, steps_per_epoch=train_steps_per_epoch,
                             validation_data=dataset_csi_val, validation_steps=val_steps_per_epoch,
                             callbacks=[callback_save, callback_stop])
 
