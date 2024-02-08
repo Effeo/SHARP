@@ -29,20 +29,22 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dense(128, activation='relu'),
     tf.keras.layers.Dense(128, activation='relu'),
     tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(8)
+    tf.keras.layers.Dense(8),
+    tf.keras.layers.Softmax()
 ])
 
 model.compile(optimizer='adam',
               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
               metrics=['accuracy'])
 
-model = RandomForestClassifier(random_state = 12)
 start = time.process_time()
-model.fit(x_train, y_train)
+model.fit(x_train, y_train, epochs = 10)
 end = time.process_time() - start
 print(end)
 predictions = model.predict(x_test)
-cm = confusion_matrix(y_test, predictions, normalize='true')
+predicted_values = [np.argmax(prediction) for prediction in predictions]
+
+cm = confusion_matrix(y_test, predicted_values, normalize='true')
 disp = ConfusionMatrixDisplay(np.around(cm, decimals = 2), display_labels=['C', 'E', 'G', 'I', 'J', 'L', 'R', 'S'])
 disp.plot(cmap=plt.cm.Blues)
 plt.savefig('models_outputs/confusion_matrix_' + name + '.jpeg')

@@ -2,10 +2,11 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from hiclass import LocalClassifierPerNode
 import scipy.io
-from sklearn.metrics import balanced_accuracy_score, confusion_matrix, ConfusionMatrixDisplay
-from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.model_selection import KFold
 import matplotlib.pyplot as plt
+import time
+import pickle
 
 def demultiplex(list_to_convert):
     list_to_append = []
@@ -29,12 +30,14 @@ def demultiplex(list_to_convert):
     list_to_append = np.array(list_to_append)
     return list_to_append
 
-dataset = scipy.io.loadmat('./dataset/dataset.mat')
+dataset = scipy.io.loadmat('./dataset/dataset2.mat')
 dataset = dataset['csi_buff']
 
 raw_labels = dataset[:,-1]
 dataset = np.delete(dataset, -1, 1)
 labels=[]
+
+name = 'hierarchical_classifier'
 
 
 for l in raw_labels:
@@ -60,15 +63,28 @@ labels = np.array(labels, dtype=object)
 
 rf = RandomForestClassifier()
 classifier = LocalClassifierPerNode(local_classifier=rf)
-x_train, x_test, y_train, y_test = train_test_split(dataset, labels, test_size = 0.40, random_state = 0)
-classifier.fit(x_train, y_train)
-predictions = classifier.predict(x_test)
-
-predictions = demultiplex(predictions)
-y_test = demultiplex(y_test)
-cm = confusion_matrix(y_test, predictions, normalize='true') 
-disp = ConfusionMatrixDisplay(np.around(cm, decimals = 2), display_labels = ['C', 'E', 'G', 'I', 'J', 'L', 'R', 'S']) 
+confusion_matrixes = []
+time_to_fit = []
+splits = 10
+kf = KFold(n_splits = splits, random_state = None, shuffle = True)
+for train_index, test_index in kf.split(dataset):
+    x_train, x_test = dataset[train_index], dataset[test_index]
+    y_train, y_test = labels[train_index], labels[test_index]
+    start = time.process_time()
+    classifier.fit(x_train, y_train)
+    end = time.process_time() - start
+    time_to_fit.append(end)
+    predictions = classifier.predict(x_test)
+    predictions = demultiplex(predictions)
+    y_test = demultiplex(y_test)
+    cm = confusion_matrix(y_test, predictions, normalize='true')
+    confusion_matrixes.append(cm) 
+avg_time = np.mean(time_to_fit)
+cm_avg = np.mean(confusion_matrixes, axis = 0)
+disp = ConfusionMatrixDisplay(np.around(cm_avg, decimals = 2), display_labels = ['C', 'E', 'G', 'I', 'J', 'L', 'R', 'S']) 
+print(avg_time)
 disp.plot(cmap=plt.cm.Blues)
 plt.savefig('models_outputs/hierarchical_classifier_confusion_matrix.jpeg')
+pickle.dump(classifier, open('models_outputs/' + name + '.pkl', 'wb'))
 
 
